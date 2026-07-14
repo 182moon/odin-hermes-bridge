@@ -3,10 +3,37 @@
 Give Odin (or any MCP-compatible agent) a way to hand off tasks it can't
 do itself to a local [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 install — full terminal, file, browser, and coding tool access — and get
-a real answer back.
+a real answer back. Also supports scheduling recurring jobs (morning
+routines, daily reports) that Hermes runs on its own.
 
-No webhooks, no servers, no Telegram relay. Just one Python file that
-Odin talks to directly on your own machine.
+No webhooks, no servers, no Telegram relay for tasks. Just one Python
+file that Odin talks to directly on your own machine.
+
+## Fastest setup: let Hermes install itself
+
+If you already have Hermes running and talk to it on Telegram, just
+message it:
+
+> install this: https://github.com/182moon/odin-hermes-bridge
+
+Hermes will download the bridge, install its one dependency, detect its
+own install paths, and hand you back a ready-to-paste MCP config with
+your actual Telegram chat ID already filled in — no placeholders to
+edit. You just paste that block into Odin's **MCP Servers → + Add**
+panel. That's the only manual step left (Hermes can't click Odin's UI
+for you).
+
+Prefer to do it yourself in a terminal instead of asking Hermes? Run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/182moon/odin-hermes-bridge/main/install.sh | bash -s -- YOUR_TELEGRAM_CHAT_ID
+```
+
+(Omit the chat ID argument if you don't know it yet — the printed
+config will have a placeholder you can fill in by hand.)
+
+The rest of this README covers the same setup done fully manually, plus
+how everything works under the hood.
 
 ## What you get
 
