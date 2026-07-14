@@ -10,11 +10,22 @@ Odin talks to directly on your own machine.
 
 ## What you get
 
-Once set up, Odin gains one new tool: **`run_hermes_task`**. Whenever
-Odin hits something outside its own capabilities, it can call this tool
-with a task description and Hermes will actually go do it — run
-commands, edit files, search the web, write code — then hand the
-result straight back to Odin.
+Once set up, Odin gains four new tools:
+
+| Tool | What it does |
+|---|---|
+| **`run_hermes_task`** | Hand off a one-off task Odin can't do itself — Hermes runs it now and returns the result |
+| **`schedule_hermes_task`** | Set up a RECURRING job (a morning routine, daily report, etc.) that Hermes runs on its own schedule, independent of Odin |
+| **`list_scheduled_tasks`** | See what's currently scheduled |
+| **`remove_scheduled_task`** | Cancel a scheduled job |
+
+`run_hermes_task` runs a full agent loop for a single task and returns
+the answer — use it for anything "do this now." `schedule_hermes_task`
+sets up a recurring job inside the user's own Hermes install using
+Hermes's built-in cron scheduler — use it for "do this every morning /
+every day / every Monday," etc. Scheduled jobs keep running even when
+Odin isn't open, as long as Hermes's own gateway/scheduler process is
+running on the user's machine (check with `hermes cron status`).
 
 ## Requirements
 
@@ -89,8 +100,29 @@ In Odin, ask it something you know it can't do on its own — e.g. "use
 Hermes to list the files in my Downloads folder" — and confirm it
 calls the tool and comes back with a real answer.
 
+Then test scheduling — ask Odin something like "set up a Hermes job
+that runs every morning at 7am and gives me a weather + calendar
+briefing." Confirm it shows up with `hermes cron list` in a terminal,
+or ask Odin to list your scheduled tasks.
+
+### 7. Keep the scheduler running
+
+Recurring jobs created with `schedule_hermes_task` only fire while
+Hermes's scheduler is actually running in the background — not just
+when Odin happens to be open. Check status with:
+
+```bash
+hermes cron status
+```
+
+If it's not running, either start the Hermes gateway (`hermes gateway
+run`, or install it as a background service — see the
+[Hermes cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron))
+so scheduled jobs keep firing even after you close everything.
+
 ## How it works
 
+**One-off tasks (`run_hermes_task`):**
 1. Odin calls `run_hermes_task(task="...")`
 2. The bridge script runs `hermes chat -q "<task>"` as a subprocess on
    your machine
@@ -98,9 +130,18 @@ calls the tool and comes back with a real answer.
    of it) until the task is done
 4. The final text answer is returned to Odin as the tool result
 
-Every call is a fresh, independent Hermes session — pass everything
-Odin knows about the task into the `task` text, since Hermes can't see
-Odin's conversation history.
+**Recurring tasks (`schedule_hermes_task`):**
+1. Odin calls `schedule_hermes_task(schedule="every day at 7am", task="...")`
+2. The bridge runs `hermes cron create` under the hood, registering a
+   real job in the user's own Hermes install
+3. Hermes's own scheduler fires the job on schedule — with or without
+   Odin open — as long as the Hermes gateway/scheduler is running
+4. `list_scheduled_tasks` / `remove_scheduled_task` wrap `hermes cron
+   list` / `hermes cron remove` so Odin can manage jobs it created
+
+Every call is independent — pass everything the calling agent knows
+about the task into the `task` text, since Hermes can't see Odin's
+conversation history or previous scheduled runs.
 
 ## Configuration knobs
 
