@@ -163,6 +163,7 @@ def run_hermes_task(task: str, timeout_seconds: int = DEFAULT_TIMEOUT) -> str:
 def schedule_hermes_task(
     schedule: str,
     task: str,
+    telegram_chat_id: str = "",
     name: str = "",
     repeat: int = 0,
 ) -> str:
@@ -174,6 +175,11 @@ def schedule_hermes_task(
     user's own Hermes install and keeps running even if Odin isn't open,
     as long as the Hermes gateway/scheduler is running on their machine.
 
+    Results are delivered to Telegram (not back to Odin — Odin only
+    creates the job, it has no channel to receive results later). The
+    user must have Hermes's Telegram gateway already connected and
+    provide the chat ID to deliver into.
+
     Args:
         schedule: When to run it. Accepts a duration ("30m", "2h"), an
             "every" phrase ("every day at 7am", "every monday 9am"), a
@@ -182,6 +188,12 @@ def schedule_hermes_task(
         task: A full, self-contained description of what Hermes should
             do each time it runs. Include everything it needs — it has
             no memory of this conversation between runs.
+        telegram_chat_id: The Telegram chat ID to deliver results to
+            (e.g. "476002436"). Required unless HERMES_TELEGRAM_CHAT_ID
+            is set as an env var in the MCP config, in which case that
+            value is used as the default. Without either, the job is
+            created with deliver=local and results only show up via
+            list_scheduled_tasks / `hermes cron list` — no notification.
         name: Optional human-friendly name for the job (helps identify
             it later in list_scheduled_tasks).
         repeat: Optional number of times to run before stopping. Leave
@@ -192,16 +204,30 @@ def schedule_hermes_task(
     if not task or not task.strip():
         return "ERROR: task text is required."
 
+    chat_id = (telegram_chat_id or os.environ.get("HERMES_TELEGRAM_CHAT_ID", "")).strip()
+
     args = ["cron", "create", schedule, task]
     if name.strip():
         args += ["--name", name.strip()]
     if repeat and repeat > 0:
         args += ["--repeat", str(repeat)]
 
+    if chat_id:
+        args += ["--deliver", f"telegram:{chat_id}"]
+        delivery_note = f"Results will be delivered to Telegram chat {chat_id}."
+    else:
+        args += ["--deliver", "local"]
+        delivery_note = (
+            "WARNING: no telegram_chat_id given and HERMES_TELEGRAM_CHAT_ID is not "
+            "set — this job will NOT notify anyone. Results only appear in "
+            "`hermes cron list` / list_scheduled_tasks. Pass a chat ID to actually "
+            "get notified."
+        )
+
     ok, output = _run_hermes_cli(args)
     if not ok:
         return output
-    return output or "Scheduled job created."
+    return f"{output}\n{delivery_note}" if output else delivery_note
 
 
 @mcp.tool()

@@ -4,7 +4,8 @@
       "command": "python3",
       "args": ["/full/path/to/hermes_task_server.py"],
       "env": {
-        "HERMES_BIN": "/full/path/to/hermes"
+        "HERMES_BIN": "/full/path/to/hermes",
+        "HERMES_TELEGRAM_CHAT_ID": "your-telegram-chat-id-here"
       }
     }
   }

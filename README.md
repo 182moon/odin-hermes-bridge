@@ -27,6 +27,18 @@ every day / every Monday," etc. Scheduled jobs keep running even when
 Odin isn't open, as long as Hermes's own gateway/scheduler process is
 running on the user's machine (check with `hermes cron status`).
 
+**Important — where scheduled results go:** Odin only *creates* the
+job; it has no way to receive results back later, since the job runs
+completely independently. `schedule_hermes_task` delivers results to a
+**Telegram chat** (the chat ID you already use with Hermes), not back
+into Odin. If you don't pass a `telegram_chat_id` (or set
+`HERMES_TELEGRAM_CHAT_ID` as a default — see Configuration knobs
+below), the job is created with `deliver=local` and its output only
+shows up in `list_scheduled_tasks` / `hermes cron list` — nobody gets
+notified. For an actual "morning briefing that lands on your phone,"
+you need Hermes's Telegram gateway already connected
+(`hermes gateway setup`) and pass that chat's ID.
+
 ## Requirements
 
 - macOS, Linux, or WSL (same as Hermes itself)
@@ -115,10 +127,23 @@ when Odin happens to be open. Check status with:
 hermes cron status
 ```
 
-If it's not running, either start the Hermes gateway (`hermes gateway
-run`, or install it as a background service — see the
-[Hermes cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron))
-so scheduled jobs keep firing even after you close everything.
+If it's not running, either start it in the foreground for testing:
+
+```bash
+hermes gateway run
+```
+
+(stays alive only while that terminal window is open — good for a
+quick test, not for production)
+
+or install it as a real background service that survives reboots and
+terminal closures:
+
+```bash
+hermes gateway install
+hermes gateway start
+hermes gateway status   # confirm it's running
+```
 
 ## How it works
 
@@ -149,6 +174,12 @@ conversation history or previous scheduled runs.
 |---|---|---|
 | `HERMES_BIN` | Full path to the `hermes` executable | first match on PATH |
 | `HERMES_TASK_TIMEOUT` | Max seconds to wait for a task | `280` |
+| `HERMES_TELEGRAM_CHAT_ID` | Default Telegram chat ID for `schedule_hermes_task` results, so Odin doesn't need to ask for it every time | none — must be passed per call if unset |
+
+Find your Telegram chat ID by messaging your Hermes bot once, then
+checking `hermes gateway status` or your Hermes logs for the chat ID,
+or by asking Hermes itself "what's this chat's ID" in a Telegram
+conversation with it.
 
 Set these in the `"env"` block of the MCP config shown above.
 
